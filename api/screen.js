@@ -8,6 +8,7 @@ const { getUniverse } = require('../data/universe');
 const { fetchBatch, toYFTicker } = require('../lib/yahoo');
 const { scoreStock } = require('../lib/scoring');
 const { checkRateLimit, cleanupStaleBuckets, getClientIp } = require('../lib/rateLimit');
+const { scoreToProb } = require('../lib/probability');
 
 module.exports = async function handler(req, res) {
   // CORS: 운영시에는 실제 배포 도메인으로 좁히는 것을 강력 권장.
@@ -23,7 +24,7 @@ module.exports = async function handler(req, res) {
   // 그래도 단순 반복 스크립트 남용은 상당 부분 차단된다.
   cleanupStaleBuckets();
   const clientIp = getClientIp(req);
-  const rl = checkRateLimit(clientIp);
+  const rl = checkRateLimit(clientIp, 'screen');
   res.setHeader('X-RateLimit-Remaining', String(rl.remaining));
   if (!rl.allowed) {
     res.setHeader('Retry-After', String(Math.ceil(rl.retryAfterMs / 1000)));
@@ -140,13 +141,3 @@ module.exports = async function handler(req, res) {
     stocks: top.map((s, i) => ({ rank: i + 1, prob2w: scoreToProb(s.score), ...s })),
   });
 };
-
-/**
- * 0~100 점수를 "2주 내 상승 확률" 추정치로 매핑.
- * 순수 규칙 기반이므로 실제 통계적 확률이 아니라 점수의 직관적 환산값임을 명시.
- * 점수 100 → 약 80%, 점수 0 → 약 40% (완전 무작위 동전던지기보다 약간 낮은 바닥)
- */
-function scoreToProb(score) {
-  const prob = 40 + (score / 100) * 40;
-  return Math.round(Math.min(82, Math.max(40, prob)));
-}

@@ -4,7 +4,7 @@
   "description": "규칙 기반(비-AI) 실시간 종목 스크리너 — Yahoo Finance 데이터 기반 기술적 지표 스코어링",
   "private": true,
   "scripts": {
-    "test": "node test/scoring.test.js && node test/macd.test.js && node test/yahoo.test.js && node test/pipeline.test.js && node test/timebudget.test.js && node test/ratelimit.test.js && node test/api-screen.test.js && node test/frontend-render.test.js",
+    "test": "node test/scoring.test.js && node test/macd.test.js && node test/backtest.test.js && node test/yahoo.test.js && node test/pipeline.test.js && node test/timebudget.test.js && node test/ratelimit.test.js && node test/api-screen.test.js && node test/api-backtest.test.js && node test/frontend-render.test.js && node test/frontend-backtest-render.test.js",
     "dev": "vercel dev"
   },
   "devDependencies": {

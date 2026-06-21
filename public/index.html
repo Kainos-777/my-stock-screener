@@ -146,6 +146,43 @@
     .sum-strip{grid-template-columns:repeat(4,1fr)}
     .ind-grid{grid-template-columns:repeat(6,1fr)}
   }
+
+  /* ── TABS ── */
+  .tabbar{display:flex;gap:4px;padding:8px 12px 0;max-width:960px;margin:0 auto;border-bottom:1px solid var(--border)}
+  .tab-btn{background:none;border:none;color:var(--text3);font-family:var(--mono);font-size:12px;letter-spacing:.04em;padding:10px 16px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+  .tab-btn:hover{color:var(--text2)}
+  .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+
+  /* ── BACKTEST ── */
+  .bt-gap-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
+  .bt-gap-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .bt-gap-item{text-align:center;flex:1;min-width:110px}
+  .bt-gap-arrow{font-size:20px;color:var(--text3)}
+  @media(max-width:480px){
+    .bt-gap-row{flex-direction:column;gap:8px}
+    .bt-gap-item{width:100%;min-width:0}
+    .bt-gap-arrow{transform:rotate(90deg);margin:-2px 0}
+  }
+  .bt-gap-lbl{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.06em;margin-bottom:6px;text-transform:uppercase}
+  .bt-gap-val{font-family:var(--mono);font-size:26px;font-weight:700}
+  .bt-gap-val.predicted{color:var(--warn)}
+  .bt-gap-val.actual{color:var(--accent)}
+  .bt-interp{margin-top:14px;padding:12px 14px;background:var(--surface2);border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;font-size:12px;color:var(--text2);line-height:1.7}
+
+  .bt-stock-list{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+  .bt-stock-row{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:12px}
+  .bt-stock-name{font-weight:600}
+  .bt-stock-meta{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:2px}
+  .bt-stat-pill{font-family:var(--mono);font-size:11px;text-align:right;white-space:nowrap}
+  .bt-stat-pill .lbl{font-size:8px;color:var(--text3);display:block;letter-spacing:.04em}
+  .bt-warn-note{margin-top:10px;padding:10px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:6px;font-size:11px;color:var(--warn);line-height:1.6}
+
+  @media(max-width:640px){
+    .bt-stock-row{grid-template-columns:1fr;gap:6px}
+    .bt-stat-pill{text-align:left}
+  }
 </style>
 </head>
 <body>
@@ -157,7 +194,13 @@
   </div>
 </header>
 
+<div class="tabbar">
+  <button class="tab-btn active" data-tab="screen" onclick="switchTab('screen')">실시간 스크리닝</button>
+  <button class="tab-btn" data-tab="backtest" onclick="switchTab('backtest')">백테스트 검증</button>
+</div>
+
 <main>
+<div class="tab-panel active" id="panel-screen">
   <div class="ctrl-panel">
     <div class="panel-lbl">▸ 분석 설정 (규칙 기반 스코어링 — AI 미사용)</div>
     <div class="ctrl-stack">
@@ -227,9 +270,87 @@
     <strong>ℹ 산출 방식</strong> — 본 도구는 AI가 아닌 <strong>규칙 기반 기술적 지표 계산</strong>으로 종목을 선별합니다.
     RSI(Wilder's), 이동평균(5/20/60일), 거래량 비율, 단기 모멘텀, ATR 변동성을 가중 합산해 0~100점을 산출하고,
     "2주 내 상승 확률(추정)"은 점수를 40~82% 구간으로 환산한 직관적 추정치입니다 (통계적으로 검증된 확률이 아닙니다).
+    옆 탭의 <strong>백테스트 검증</strong>에서 이 추정치가 과거 데이터와 실제로 얼마나 맞았는지 직접 확인해보세요.
+  </div>
+</div>
+
+<div class="tab-panel" id="panel-backtest">
+  <div class="ctrl-panel">
+    <div class="panel-lbl">▸ 백테스트 설정 — 과거 데이터로 "이 점수가 실제로 맞았는지" 검증</div>
+    <div class="ctrl-stack">
+      <div class="ctrl-row">
+        <div class="cg"><label>시장 구분</label>
+          <select id="btMktSel">
+            <option value="KOSPI">KOSPI</option>
+            <option value="KOSDAQ">KOSDAQ</option>
+            <option value="KR_ALL">한국 전체</option>
+            <option value="US_ALL">미국 (NYSE+NASDAQ)</option>
+          </select>
+        </div>
+        <div class="cg"><label>검증 종목 수</label>
+          <select id="btCountSel">
+            <option value="8">8종목 (빠름)</option>
+            <option value="12" selected>12종목</option>
+            <option value="20">20종목 (느림)</option>
+          </select>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <div class="cg"><label>선정 기준 점수</label>
+          <select id="btMinScoreSel">
+            <option value="50">50점 이상</option>
+            <option value="60" selected>60점 이상</option>
+            <option value="70">70점 이상</option>
+            <option value="80">80점 이상 (엄격)</option>
+          </select>
+        </div>
+        <div class="cg"><label>결과 확인 시점</label>
+          <select id="btHorizonSel">
+            <option value="5">5영업일 후 (~1주)</option>
+            <option value="10" selected>10영업일 후 (~2주)</option>
+            <option value="20">20영업일 후 (~1개월)</option>
+          </select>
+        </div>
+      </div>
+      <div class="cg"><label style="visibility:hidden">실행</label>
+        <button class="btn" id="btnBacktest" onclick="runBacktest()">백테스트 실행 →</button>
+      </div>
+    </div>
   </div>
 
-  <div class="disc"><strong>⚠ 투자 참고용 정보</strong> — 실시간 가격은 Yahoo Finance(비공식 API) 경유로 수집되며 지연·결측이 있을 수 있습니다. 본 도구는 투자 참고용이며 실제 투자 결정은 본인 판단과 책임 하에 이루어져야 합니다. 모든 투자에는 원금 손실 위험이 있습니다.</div>
+  <div class="sbar" id="btSbar">
+    <span id="btSTxt" style="white-space:nowrap">과거 1년치 데이터 수집 중...</span>
+    <div class="prog-wrap"><div class="prog-bar"></div></div>
+  </div>
+
+  <div class="ld" id="btLdState">
+    <div class="dots"><span></span><span></span><span></span></div>
+    <div class="ld-msg">과거 데이터로 시뮬레이션 실행 중</div>
+    <div class="ld-step" id="btLdHint">최대 1년치 × 여러 종목 — 다소 시간이 걸릴 수 있습니다</div>
+  </div>
+
+  <div id="btResArea">
+    <div class="empty">
+      <div class="eico">📊</div>
+      <div class="etitle">백테스트 대기 중</div>
+      <div class="esub">조건을 설정하고 실행하면, 과거에 이 점수 기준이 실제로 얼마나 맞았는지 보여줍니다</div>
+    </div>
+  </div>
+
+  <div class="method-note">
+    <strong>ℹ 백테스트란?</strong> — "지금 화면의 점수가 정말 믿을 만한가?"를 검증하는 기능입니다.
+    과거 1년 동안 결과 확인 시점 간격으로 이 스코어링 로직을 실제로 돌려서, 그 시점에 "선정 기준" 점수 이상이었던 경우들을 모아
+    실제로 며칠 후 주가가 올랐는지 비교합니다. <strong>미래 데이터를 미리 보지 않도록</strong> 설계되어 있습니다
+    (과거 특정 날짜를 기준으로 그 이전 데이터만 사용해 점수를 계산하며, 표본 간 측정 구간이 겹치지 않도록 간격을 둡니다).
+  </div>
+  <div class="method-note" style="border-left-color:var(--warn);background:rgba(245,158,11,.05)">
+    <strong>⚠ 생존 편향(survivorship bias) 주의</strong> — 백테스트 대상 종목은 <strong>현재 시점</strong> 기준 시가총액 상위 종목입니다.
+    1년 전에는 순위가 달랐을 수 있고, 그 사이 크게 하락했거나 상장폐지된 종목은 애초에 이 목록에 없어 백테스트에서 제외됩니다.
+    즉 본 백테스트는 <strong>"현재까지 살아남아 잘 된 종목들"만으로 검증</strong>하는 구조적 한계가 있어, 실제보다 낙관적인 결과가 나올 수 있습니다.
+  </div>
+</div>
+
+  <div class="disc"><strong>⚠ 투자 참고용 정보</strong> — 실시간 가격은 Yahoo Finance(비공식 API) 경유로 수집되며 지연·결측이 있을 수 있습니다. 본 도구는 투자 참고용이며 실제 투자 결정은 본인 판단과 책임 하에 이루어져야 합니다. 모든 투자에는 원금 손실 위험이 있습니다. 백테스트 결과 역시 과거 데이터 기준이며 미래 수익을 보장하지 않습니다.</div>
 </main>
 
 <script>
@@ -428,6 +549,138 @@ function sortCards(k, btn) {
 
 // 초기 자동 실행 (선택사항 — 페이지 로드시 바로 보여주고 싶다면 주석 해제)
 // runScreen();
+
+/* ══════════════════════════════
+   TAB SWITCHING
+══════════════════════════════ */
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.getElementById('panel-screen').classList.toggle('active', name === 'screen');
+  document.getElementById('panel-backtest').classList.toggle('active', name === 'backtest');
+  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { /* 구형 환경 등에서 안전하게 무시 */ }
+}
+
+/* ══════════════════════════════
+   BACKTEST
+══════════════════════════════ */
+async function runBacktest() {
+  const btn = document.getElementById('btnBacktest');
+  const market = document.getElementById('btMktSel').value;
+  const count = document.getElementById('btCountSel').value;
+  const minScore = document.getElementById('btMinScoreSel').value;
+  const horizonDays = document.getElementById('btHorizonSel').value;
+
+  btn.disabled = true;
+  document.getElementById('btSbar').classList.add('show');
+  document.getElementById('btLdState').classList.add('show');
+  document.getElementById('btResArea').innerHTML = '';
+
+  // 종목 수에 비례한 대략적인 예상 시간을 보여줘서 "무한정 기다리는 느낌"을 줄인다.
+  // 실측 기준 1종목당 평균 0.3~0.6초 정도 소요(네트워크 상태에 따라 변동).
+  const estSeconds = Math.max(3, Math.round(Number(count) * 0.5));
+  document.getElementById('btLdHint').textContent =
+    `${count}종목 × 최대 1년치 데이터 — 약 ${estSeconds}초 예상`;
+
+  const qs = new URLSearchParams({ market, count, minScore, horizonDays });
+
+  try {
+    const res = await fetch(`${API_BASE}/api/backtest?${qs.toString()}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    renderBacktest(data);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('btResArea').innerHTML = `
+      <div class="empty">
+        <div class="eico">⚠</div>
+        <div class="etitle">백테스트 실패</div>
+        <div class="esub" style="color:var(--dn)">${err.message}</div>
+      </div>`;
+  } finally {
+    btn.disabled = false;
+    document.getElementById('btLdState').classList.remove('show');
+    document.getElementById('btSbar').classList.remove('show');
+  }
+}
+
+function renderBacktest(data) {
+  const stats = data.overallStats;
+  const area = document.getElementById('btResArea');
+
+  if (!stats || stats.selectedSamples === 0) {
+    area.innerHTML = `
+      <div class="empty">
+        <div class="eico">∅</div>
+        <div class="etitle">검증 가능한 표본이 없습니다</div>
+        <div class="esub">${data.interpretation || '선정 기준 점수를 낮춰서 다시 시도해보세요'}</div>
+      </div>`;
+    return;
+  }
+
+  const predicted = stats.avgPredictedProb ?? 0;
+  const actual = stats.actualUpRate;
+  const gap = predicted - actual;
+  const gapAbs = Math.abs(gap).toFixed(1);
+
+  let html = `
+  <div class="bt-gap-card">
+    <div class="bt-gap-row">
+      <div class="bt-gap-item">
+        <div class="bt-gap-lbl">화면이 보여준 예상 확률</div>
+        <div class="bt-gap-val predicted">${predicted}%</div>
+      </div>
+      <div class="bt-gap-arrow">→</div>
+      <div class="bt-gap-item">
+        <div class="bt-gap-lbl">과거 실제 적중률</div>
+        <div class="bt-gap-val actual">${actual}%</div>
+      </div>
+      <div class="bt-gap-item">
+        <div class="bt-gap-lbl">차이</div>
+        <div class="bt-gap-val" style="color:${gapAbs > 10 ? 'var(--dn)' : gapAbs > 5 ? 'var(--warn)' : 'var(--up)'}">${gap >= 0 ? '+' : ''}${gap.toFixed(1)}%p</div>
+      </div>
+    </div>
+    <div class="bt-interp">${data.interpretation}</div>
+    ${stats.selectedSamples < 30 ? `<div class="bt-warn-note">⚠ 선정 표본이 ${stats.selectedSamples}개로 적습니다. 표본이 적으면 우연에 의한 변동 폭이 커서, 결과를 곧이곧대로 믿기보다는 "검증 종목 수"를 늘려 다시 확인해보시길 권장합니다.</div>` : ''}
+  </div>
+
+  <div class="sum-strip">
+    <div class="sum-card"><div class="sum-lbl">전체 표본</div><div class="sum-val">${stats.totalSamples}</div><div class="sum-sub">과거 채점 횟수</div></div>
+    <div class="sum-card"><div class="sum-lbl">선정 표본</div><div class="sum-val">${stats.selectedSamples}</div><div class="sum-sub">점수 ${data.minScore}+ 였던 경우</div></div>
+    <div class="sum-card"><div class="sum-lbl">선정시 평균 수익률</div><div class="sum-val" style="color:${stats.avgReturnIfSelected>=0?'var(--up)':'var(--dn)'}">${stats.avgReturnIfSelected>=0?'+':''}${stats.avgReturnIfSelected}%</div><div class="sum-sub">${data.horizonDays}영업일 후 기준</div></div>
+    <div class="sum-card"><div class="sum-lbl">전체 평균(비교 기준선)</div><div class="sum-val" style="font-size:16px">${stats.avgReturnAll>=0?'+':''}${stats.avgReturnAll}%</div><div class="sum-sub">선정여부 무관 채점시점 평균 (매수보유전략 아님)</div></div>
+  </div>
+
+  <div class="res-hdr">
+    <div class="res-cnt"><strong>${data.succeeded}</strong>종목별 상세 결과</div>
+  </div>
+  <div class="bt-stock-list">`;
+
+  data.perStock.forEach(s => {
+    const st = s.stats;
+    const hasData = st.selectedSamples > 0;
+    html += `
+    <div class="bt-stock-row">
+      <div>
+        <div class="bt-stock-name">${s.name}</div>
+        <div class="bt-stock-meta">${s.code} · ${s.sector} · 과거 ${s.historyDays}일치 데이터</div>
+      </div>
+      <div class="bt-stat-pill"><span class="lbl">표본</span>${st.totalSamples}개 중 ${st.selectedSamples}개 선정</div>
+      <div class="bt-stat-pill"><span class="lbl">실제 적중률</span>${hasData ? st.actualUpRate + '%' : '—'}</div>
+      <div class="bt-stat-pill"><span class="lbl">평균 수익률</span><span style="color:${hasData && st.avgReturnIfSelected>=0?'var(--up)':hasData?'var(--dn)':'var(--text3)'}">${hasData ? (st.avgReturnIfSelected>=0?'+':'')+st.avgReturnIfSelected+'%' : '—'}</span></div>
+    </div>`;
+  });
+
+  html += `</div>`;
+
+  if (data.failed > 0) {
+    html += `<div class="bt-warn-note" style="margin-top:10px">ℹ ${data.failed}개 종목은 데이터 부족 또는 조회 실패로 백테스트에서 제외되었습니다.</div>`;
+  }
+  if (data.partial_scan) {
+    html += `<div class="bt-warn-note" style="margin-top:10px">⏱ 처리 시간 제한으로 ${data.skipped_due_to_timeout}개 종목은 조회를 건너뛰었습니다. 검증 종목 수를 줄이면 더 안정적으로 완료됩니다.</div>`;
+  }
+
+  area.innerHTML = html;
+}
 </script>
 </body>
 </html>
